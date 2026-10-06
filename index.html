@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工廠監控系統</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b0f14;
+  color: white;
+}
+
+.app {
+  min-height: 100vh;
+  padding-bottom: 90px;
+}
+
+.header {
+  padding: 25px 20px 15px;
+  background: #11161d;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.header p {
+  margin: 6px 0 0;
+  color: #9ca6b5;
+}
+
+.page {
+  display: none;
+  padding: 20px;
+}
+
+.page.active {
+  display: block;
+}
+
+.card {
+  background: #151b23;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 1px solid #252d38;
+}
+
+.card.clickable {
+  cursor: pointer;
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background: #35d07f;
+  border-radius: 50%;
+}
+
+.warning .dot {
+  background: #ffb020;
+}
+
+.danger .dot {
+  background: #ff4d5d;
+}
+
+.big-number {
+  font-size: 40px;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+.label {
+  color: #9ca6b5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.machine {
+  background: #151b23;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #252d38;
+}
+
+.machine h3 {
+  margin-top: 0;
+}
+
+.machine p {
+  color: #9ca6b5;
+}
+
+.button {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 15px;
+  background: #2384ff;
+  color: white;
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.back {
+  margin-bottom: 15px;
+  background: #202833;
+}
+
+.message {
+  padding: 15px;
+  background: #151b23;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+
+.message small {
+  color: #8792a2;
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 75px;
+  background: #151a21;
+  border-top: 1px solid #2a323d;
+  display: flex;
+  z-index: 20;
+}
+
+.nav button {
+  flex: 1;
+  background: none;
+  border: 0;
+  color: #8993a1;
+  font-size: 13px;
+}
+
+.nav button.active {
+  color: #4d9cff;
+  font-weight: 700;
+}
+
+.icon {
+  font-size: 25px;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge {
+  background: #ff4d5d;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.progress {
+  height: 9px;
+  background: #252d38;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.progress div {
+  height: 100%;
+  background: #2384ff;
+  width: 78%;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header class="header">
+  <h1>🏭 工廠監控</h1>
+  <p>Factory Monitor</p>
+</header>
+
+<!-- 首頁 -->
+<section id="home" class="page active">
+
+  <div class="card">
+    <div class="title-row">
+      <h2>今日工廠狀態</h2>
+      <span class="badge">即時</span>
+    </div>
+
+    <div class="status">
+      <span class="dot"></span>
+      <strong>系統正常運作</strong>
+    </div>
+
+    <div class="big-number">98.5%</div>
+    <div class="label">今日設備正常率</div>
+  </div>
+
+  <div class="grid">
+
+    <div class="machine clickable" onclick="showPage('machines')">
+      <h3>⚙️</h3>
+      <strong>設備</strong>
+      <p>12 台運轉中</p>
+    </div>
+
+    <div class="machine clickable" onclick="showPage('alerts')">
+      <h3>⚠️</h3>
+      <strong>警報</strong>
+      <p>2 筆待處理</p>
+    </div>
+
+    <div class="machine clickable" onclick="showPage('production')">
+      <h3>📊</h3>
+      <strong>生產</strong>
+      <p>今日 8,520 件</p>
+    </div>
+
+    <div class="machine clickable" onclick="showPage('messages')">
+      <h3>💬</h3>
+      <strong>訊息</strong>
+      <p>3 則新訊息</p>
+    </div>
+
+  </div>
+
+  <div class="card clickable" onclick="showPage('machines')">
+    <div class="title-row">
+      <h3>設備總覽</h3>
+      <span>›</span>
+    </div>
+    <p class="label">點擊查看所有設備</p>
+  </div>
+
+</section>
+
+<!-- 設備 -->
+<section id="machines" class="page">
+
+  <button class="button back" onclick="showPage('home')">
+    ← 回到首頁
+  </button>
+
+  <h2>⚙️ 設備監控</h2>
+
+  <div class="card">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>機台 A01</strong>
+    </div>
+    <p class="label">運轉中</p>
+    <div class="big-number">86%</div>
+    <p>目前負載</p>
+  </div>
+
+  <div class="card">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>機台 A02</strong>
+    </div>
+    <p class="label">運轉中</p>
+    <div class="big-number">72%</div>
+    <p>目前負載</p>
+  </div>
+
+  <div class="card warning">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>機台 B01</strong>
+    </div>
+    <p class="label">需要注意</p>
+    <div class="big-number">91%</div>
+    <p>目前負載</p>
+  </div>
+
+</section>
+
+<!-- 生產 -->
+<section id="production" class="page">
+
+  <button class="button back" onclick="showPage('home')">
+    ← 回到首頁
+  </button>
+
+  <h2>📊 生產監控</h2>
+
+  <div class="card">
+    <p class="label">今日生產量</p>
+    <div class="big-number">8,520</div>
+    <p>件</p>
+
+    <div class="progress">
+      <div></div>
+    </div>
+
+    <p class="label">今日目標完成 78%</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <p class="label">上午</p>
+      <h2>3,240</h2>
+    </div>
+
+    <div class="card">
+      <p class="label">下午</p>
+      <h2>5,280</h2>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- 警報 -->
+<section id="alerts" class="page">
+
+  <button class="button back" onclick="showPage('home')">
+    ← 回到首頁
+  </button>
+
+  <h2>⚠️ 警報中心</h2>
+
+  <div class="card warning">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>機台 B01 溫度偏高</strong>
+    </div>
+    <p>溫度：82°C</p>
+    <small>10:42</small>
+  </div>
+
+  <div class="card warning">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>機台 C03 負載偏高</strong>
+    </div>
+    <p>負載：94%</p>
+    <small>10:35</small>
+  </div>
+
+</section>
+
+<!-- 訊息 -->
+<section id="messages" class="page">
+
+  <button class="button back" onclick="showPage('home')">
+    ← 回到首頁
+  </button>
+
+  <h2>💬 訊息中心</h2>
+
+  <div class="message">
+    <strong>👨‍🔧 維修人員</strong>
+    <p>機台 B01 已完成檢查。</p>
+    <small>10:50</small>
+  </div>
+
+  <div class="message">
+    <strong>🏭 生產線</strong>
+    <p>今日產量已達 78%。</p>
+    <small>10:30</small>
+  </div>
+
+  <div class="message">
+    <strong>⚙️ 系統</strong>
+    <p>所有主要設備正常運轉。</p>
+    <small>10:15</small>
+  </div>
+
+</section>
+
+</div>
+
+<!-- 底部選單 -->
+<nav class="nav">
+
+  <button id="nav-home" class="active" onclick="showPage('home')">
+    <span class="icon">🏠</span>
+    首頁
+  </button>
+
+  <button id="nav-machines" onclick="showPage('machines')">
+    <span class="icon">⚙️</span>
+    設備
+  </button>
+
+  <button id="nav-production" onclick="showPage('production')">
+    <span class="icon">📊</span>
+    生產
+  </button>
+
+  <button id="nav-messages" onclick="showPage('messages')">
+    <span class="icon">💬</span>
+    訊息
+  </button>
+
+</nav>
+
+<script>
+
+function showPage(pageId) {
+
+  // 隱藏所有畫面
+  const pages = document.querySelectorAll('.page');
+
+  pages.forEach(function(page) {
+    page.classList.remove('active');
+  });
+
+  // 顯示指定畫面
+  const target = document.getElementById(pageId);
+
+  if (target) {
+    target.classList.add('active');
+  }
+
+  // 更新底部選單
+  const navButtons = document.querySelectorAll('.nav button');
+
+  navButtons.forEach(function(button) {
+    button.classList.remove('active');
+  });
+
+  const nav = document.getElementById('nav-' + pageId);
+
+  if (nav) {
+    nav.classList.add('active');
+  }
+
+  // 回到頁面最上方
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+</script>
+
+</body>
+</html>
