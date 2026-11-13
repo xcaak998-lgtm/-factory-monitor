@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10243a">
+<title>工廠即時監控系統</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1725;--panel:#13263b;--line:#29435d;--muted:#9bb0c5;--text:#edf5fc;--green:#35d39a;--blue:#63b3ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#0b1725,#10243a);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:18px}
+main{max-width:980px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 20px}
+h1{font-size:24px;margin:0 0 6px}.sub,.muted{color:var(--muted);font-size:13px}
+.status{border:1px solid #246b57;color:var(--green);border-radius:30px;padding:8px 12px;font-size:13px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card,.logbox{background:rgba(19,38,59,.94);border:1px solid var(--line);border-radius:16px;padding:16px}
+.cardhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.machine{font-size:18px;font-weight:700}.ok{font-size:12px;color:var(--green)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.metric label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
+.metric strong{font-size:clamp(19px,5vw,25px);font-variant-numeric:tabular-nums}
+.unit{font-size:11px;color:var(--muted);margin-left:2px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+button{border:1px solid #42617e;border-radius:10px;padding:11px 15px;background:#1b3a57;color:white;font-size:14px}
+button.primary{background:#176b56;border-color:#248c70}
+h2{font-size:17px;margin:22px 0 10px}
+.logbox{overflow:auto}table{width:100%;border-collapse:collapse;min-width:650px;font-size:13px}
+th,td{text-align:right;padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:600}
+.note{margin-top:18px;padding:12px;border-left:3px solid #d5a84b;background:#2c2a20;border-radius:8px;color:#f0dfb7;font-size:13px;line-height:1.6}
+footer{color:var(--muted);font-size:12px;margin:16px 2px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>工廠即時監控系統</h1><div class="sub">A01 · A02 · B01｜模擬數據每秒更新</div></div>
+    <div class="status" id="runStatus">● 模擬運行中</div>
+  </div>
+  <section class="cards" id="cards"></section>
+  <div class="controls">
+    <button class="primary" id="toggle">暫停更新</button>
+    <button id="export">匯出 Excel 可開啟的 CSV</button>
+    <button id="clear">清除本次紀錄</button>
+  </div>
+  <div class="muted">最後更新：<span id="lastUpdate">--</span>　｜　本次紀錄：<span id="count">0</span> 筆</div>
+  <h2>最近量測紀錄</h2>
+  <div class="logbox">
+    <table><thead><tr><th>時間</th><th>機器</th><th>電壓 (V)</th><th>電流 (A)</th><th>功率 (W)</th></tr></thead>
+    <tbody id="logs"><tr><td colspan="5" class="muted">等待第一筆資料…</td></tr></tbody></table>
+  </div>
+  <div class="note">注意：本頁產生的是測試用模擬亂數，不是真實機台感測資料，也不會自動寫回 OneDrive Excel。按「匯出 CSV」可下載本次瀏覽期間的紀錄，再用 Excel 開啟。</div>
+  <footer>工廠設備模擬監控｜每秒更新一次</footer>
+</main>
+<script>
+const ids=["A01","A02","B01"];
+const records=[];
+let running=true, timer=null;
+const state={};
+function rand(min,max,dp=2){return (Math.random()*(max-min)+min).toFixed(dp)}
+function stamp(){return new Date().toLocaleString("zh-TW",{hour12:false})}
+function renderCards(){
+ document.getElementById("cards").innerHTML=ids.map(id=>{
+  const d=state[id]||{v:"--",a:"--",p:"--"};
+  return `<article class="card"><div class="cardhead"><span class="machine">機器 ${id}</span><span class="ok">● 正常</span></div><div class="metrics">
+  <div class="metric"><label>電壓</label><strong>${d.v}</strong><span class="unit">V</span></div>
+  <div class="metric"><label>電流</label><strong>${d.a}</strong><span class="unit">A</span></div>
+  <div class="metric"><label>功率</label><strong>${d.p}</strong><span class="unit">W</span></div>
+  </div></article>`;
+ }).join("");
+}
+function tick(){
+ const now=stamp();
+ ids.forEach(id=>{
+  const v=Number(rand(210,230)),a=Number(rand(2,10)),p=Number((v*a).toFixed(2));
+  state[id]={v:v.toFixed(2),a:a.toFixed(2),p:p.toFixed(2)};
+  records.unshift({time:now,id,v:v.toFixed(2),a:a.toFixed(2),p:p.toFixed(2)});
+ });
+ if(records.length>5000)records.length=5000;
+ renderCards();
+ document.getElementById("lastUpdate").textContent=now;
+ document.getElementById("count").textContent=records.length;
+ document.getElementById("logs").innerHTML=records.slice(0,15).map(x=>`<tr><td>${x.time}</td><td>${x.id}</td><td>${x.v}</td><td>${x.a}</td><td>${x.p}</td></tr>`).join("");
+}
+function start(){if(timer)clearInterval(timer);tick();timer=setInterval(tick,1000);running=true;document.getElementById("toggle").textContent="暫停更新";document.getElementById("runStatus").textContent="● 模擬運行中"}
+function pause(){if(timer)clearInterval(timer);timer=null;running=false;document.getElementById("toggle").textContent="繼續更新";document.getElementById("runStatus").textContent="Ⅱ 已暫停"}
+document.getElementById("toggle").addEventListener("click",()=>running?pause():start());
+document.getElementById("clear").addEventListener("click",()=>{records.length=0;document.getElementById("count").textContent="0";document.getElementById("logs").innerHTML='<tr><td colspan="5" class="muted">紀錄已清除</td></tr>'});
+document.getElementById("export").addEventListener("click",()=>{
+ const rows=[["時間","機器","電壓(V)","電流(A)","功率(W)"],...records.slice().reverse().map(x=>[x.time,x.id,x.v,x.a,x.p])];
+ const csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="工廠監控紀錄.csv";a.click();URL.revokeObjectURL(url);
+});
+start();
+</script>
+</body>
+</html>
